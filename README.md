@@ -2,6 +2,8 @@
 
 This repository contains the source code for the Pixie AddOn for AWS SSP CDK. `ssp-amazon-eks` is a [CDK](https://aws.amazon.com/cdk/) construct that makes it easy for customers to build and deploy a Shared Services Platform (SSP) on top of [Amazon EKS](https://aws.amazon.com/eks/).
 
+Pixie is an open source observability tool for Kubernetes applications. Use Pixie to view the high-level state of your cluster (service maps, cluster resources, application traffic) and also drill-down into more detailed views (pod state, flame graphs, individual full-body application requests). Read more about Pixie [here](https://pixielabs.ai/).
+
 ## Installation
 
 Using [npm](https://npmjs.org):
