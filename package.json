@@ -16,7 +16,7 @@
         "watch": "tsc -w",
         "test": "jest",
         "cdk": "cdk",
-        "lint": "npx eslint . --ext .js,.jsx,.ts,.tsx"
+        "lint": "eslint . --ext .js,.jsx,.ts,.tsx"
     },
     "devDependencies": {
         "@types/jest": "^26.0.10",
