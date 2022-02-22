@@ -1,6 +1,6 @@
 {
     "name": "@michellenguyen/pixie-ssp-addon-test",
-    "version": "0.0.5",
+    "version": "0.0.6",
     "main": "dist/index.js",
     "types": "dist/index.d.ts",
     "files": [
@@ -34,6 +34,7 @@
         "typescript": "~3.9.7"
     },
     "dependencies": {
+        "@aws-cdk/aws-eks": "1.135.0",
         "@aws-cdk/aws-iam": "1.135.0",
         "@aws-cdk/core": "1.135.0",
         "@aws-quickstart/ssp-amazon-eks": "^0.12.3",
