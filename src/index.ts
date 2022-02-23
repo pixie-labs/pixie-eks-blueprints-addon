@@ -16,8 +16,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { ClusterAddOn, ClusterInfo } from '@aws-quickstart/ssp-amazon-eks';
+import * as ssp from '@aws-quickstart/ssp-amazon-eks';
 import { Construct } from '@aws-cdk/core';
+import { ServiceAccount } from '@aws-cdk/aws-eks';
 
 export type DataAccessType = 'Full' | 'Restricted' | 'PIIRestricted';
 
@@ -63,6 +64,12 @@ export interface PixieAddOnProps {
     deployKey?: string;
 
     /**
+     * If the deployKey is a secret in AWS Secrets Manager, the name of the
+     * secret in Secrets Manager.
+     */
+    deployKeySecretName?: string;
+
+    /**
      * Kubernetes cluster name.
      */
     clusterName?: string;
@@ -100,30 +107,129 @@ export interface PixieAddOnProps {
 
 }
 
+/*
+ * Creates a long-running pod which mounts the deploy key from Secrets Manager. For the time
+ * being, this needs to be continually running for as long as we want the K8s secret
+ * resource to exist.
+ */
+const createSecretPodManifest = (
+  image: string,
+  sa: ServiceAccount,
+  secretProviderClassName: string,
+) => {
+  const name = 'pixie-secret-pod';
+  const deployment = {
+    apiVersion: 'apps/v1',
+    kind: 'Deployment',
+    metadata: {
+      name,
+      namespace: sa.serviceAccountNamespace,
+    },
+    spec: {
+      replicas: 1,
+      selector: { matchLabels: { name } },
+      template: {
+        metadata: { labels: { name } },
+        spec: {
+          serviceAccountName: sa.serviceAccountName,
+          containers: [
+            {
+              name,
+              image,
+              command: ['sh', '-c', 'while :; do sleep 2073600; done'],
+              volumeMounts: [{
+                name: 'secrets-store',
+                mountPath: '/mnt/secrets-store',
+                readOnly: true,
+              }],
+            },
+          ],
+          volumes: [{
+            name: 'secrets-store',
+            csi: {
+              driver: 'secrets-store.csi.k8s.io',
+              readOnly: true,
+              volumeAttributes: {
+                secretProviderClass: secretProviderClassName,
+              },
+            },
+          }],
+        },
+      },
+    },
+  };
+  return deployment;
+};
+
 const defaultProps: PixieAddOnProps = {
   repository: 'https://pixie-operator-charts.storage.googleapis.com',
   release: 'pixie',
   chart: 'pixie-operator-chart',
-  version: '0.0.18',
+  version: '0.0.19',
   namespace: 'pl',
   cloudAddr: 'withpixie.ai:443',
   useEtcdOperator: false,
   pemMemoryLimit: '2Gi',
   dataAccess: 'Full',
+  deployKey: '',
 };
 
-export class PixieAddOn implements ClusterAddOn {
+export class PixieAddOn implements ssp.ClusterAddOn {
   readonly options: PixieAddOnProps;
+
+  /*
+   * Sets up how the Secrets Manager secret should be deployed as K8s secret. Expects the
+   * Secrets Manager secret naame to be passed in as "deployKeySecretName", and the value
+   * of the secret should be the deployKey (not wrapped in any JSON structure).
+   */
+  setupSecret(clusterInfo: ssp.ClusterInfo, serviceAccount: ServiceAccount):
+    ssp.SecretProviderClass {
+    const csiSecret: ssp.addons.CsiSecretProps = {
+      secretProvider: new ssp.LookupSecretsManagerSecretByName(this.options.deployKeySecretName!),
+      kubernetesSecret: {
+        secretName: 'pl-deploy-secrets',
+        data: [
+          {
+            key: 'deploy-key',
+          },
+        ],
+      },
+    };
+
+    return new ssp.addons.SecretProviderClass(clusterInfo, serviceAccount, 'pixie-deploy-key-secret-class', csiSecret);
+  }
 
   constructor(props?: PixieAddOnProps) {
     this.options = { ...defaultProps, ...props };
   }
 
-  deploy(clusterInfo: ClusterInfo): Promise<Construct> {
+  deploy(clusterInfo: ssp.ClusterInfo): Promise<Construct> {
     const props = this.options;
+    let secretPod : Construct | undefined;
+
+    // Create namespace.
+    const ns = ssp.utils.createNamespace(props.namespace!, clusterInfo.cluster, true);
+
+    // If the secret is stored in Secrets Manager, create the secret provider class and pod
+    // so that the secret is launched as a K8s secret.
+    if (props.deployKeySecretName) {
+      const sa = clusterInfo.cluster.addServiceAccount('pixie-addon-secret-sa', {
+        name: 'pixie-addon-secret-sa',
+        namespace: props.namespace,
+      });
+      sa.node.addDependency(ns);
+      const secretProviderClass = this.setupSecret(clusterInfo, sa);
+      secretPod = clusterInfo.cluster.addManifest(
+        'pixie-secret-pod',
+        createSecretPodManifest('busybox', sa, 'pixie-deploy-key-secret-class'),
+      );
+      secretProviderClass.addDependent(secretPod!);
+
+      props.deployKey = 'unused'; // This is temporary, until the Vizier CRD makes this field non-required.
+    }
 
     const pixieHelmChart = clusterInfo.cluster.addHelmChart('pixie', {
-      chart: props.chart,
+      chart: props.chart!,
       release: props.release,
       repository: props.repository,
       namespace: props.namespace,
@@ -137,6 +243,14 @@ export class PixieAddOn implements ClusterAddOn {
         patches: props.patches,
       },
     });
+
+    if (secretPod) {
+      // Ensure that the namespace is created at the correct step.
+      pixieHelmChart.node.addDependency(ns);
+      pixieHelmChart.node.addDependency(secretPod);
+      secretPod.node.addDependency(ns);
+    }
+
     return Promise.resolve(pixieHelmChart);
   }
 }
