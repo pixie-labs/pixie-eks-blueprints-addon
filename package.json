@@ -1,6 +1,6 @@
 {
-    "name": "@pixie-labs/pixie-ssp-addon",
-    "version": "0.0.2",
+    "name": "@pixie-labs/pixie-blueprints-addon",
+    "version": "0.0.1",
     "main": "dist/index.js",
     "types": "dist/index.d.ts",
     "files": [
@@ -9,7 +9,7 @@
     "license": "Apache-2.0",
     "repository": {
         "type": "git",
-        "url": "https://github.com/pixie-labs/pixie-ssp-addon.git"
+        "url": "https://github.com/pixie-labs/pixie-blueprints-addon.git"
     },
     "scripts": {
         "build": "rm -rf dist && tsc",

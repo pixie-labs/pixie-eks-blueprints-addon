@@ -1,6 +1,6 @@
-# Pixie AddOn for AWS SSP CDK Platform
+# Pixie AddOn for EKS Blueprints 
 
-This repository contains the source code for the Pixie AddOn for AWS SSP CDK. `ssp-amazon-eks` is a [CDK](https://aws.amazon.com/cdk/) construct that makes it easy for customers to build and deploy a Shared Services Platform (SSP) on top of [Amazon EKS](https://aws.amazon.com/eks/).
+This repository contains the source code for the Pixie AddOn for EKS Blueprints. `ssp-amazon-eks` is a [CDK](https://aws.amazon.com/cdk/) construct that makes it easy for customers to build and deploy a Shared Services Platform (SSP) on top of [Amazon EKS](https://aws.amazon.com/eks/).
 
 Pixie is an open source observability tool for Kubernetes applications. Use Pixie to view the high-level state of your cluster (service maps, cluster resources, application traffic) and also drill-down into more detailed views (pod state, flame graphs, individual full-body application requests). Read more about Pixie [here](https://pixielabs.ai/).
 
@@ -9,7 +9,7 @@ Pixie is an open source observability tool for Kubernetes applications. Use Pixi
 Using [npm](https://npmjs.org):
 
 ```bash
-$ npm install @pixie-labs/pixie-ssp-addon
+$ npm install @pixie-labs/pixie-blueprints-addon
 ```
 
 ## Usage
@@ -19,7 +19,7 @@ $ npm install @pixie-labs/pixie-ssp-addon
 ```
 import { App } from '@aws-cdk/core';
 import * as ssp from '@aws-quickstart/ssp-amazon-eks';
-import { PixieAddOn } from '@pixie-labs/pixie-ssp-addon';
+import { PixieAddOn } from '@pixie-labs/pixie-blueprints-addon';
 
 const app = new App();
 
@@ -37,7 +37,7 @@ ssp.EksBlueprint.builder()
 ```
 import { App } from '@aws-cdk/core';
 import * as ssp from '@aws-quickstart/ssp-amazon-eks';
-import { PixieAddOn } from '@pixie-labs/pixie-ssp-addon';
+import { PixieAddOn } from '@pixie-labs/pixie-blueprints-addon';
 
 const app = new App();
 
@@ -102,5 +102,5 @@ Helm chart version.
 Additional options for customers who may need to supply their own private Helm repository.
 
 ## License
-pixie-ssp-addon is licensed under the [Apache 2.0](http://apache.org/licenses/LICENSE-2.0.txt) License.
+pixie-blueprints-addon is licensed under the [Apache 2.0](http://apache.org/licenses/LICENSE-2.0.txt) License.
 
