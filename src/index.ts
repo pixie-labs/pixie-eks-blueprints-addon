@@ -16,13 +16,13 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import * as ssp from '@aws-quickstart/ssp-amazon-eks';
-import { Construct } from '@aws-cdk/core';
-import { ServiceAccount } from '@aws-cdk/aws-eks';
+import * as ssp from '@aws-quickstart/eks-blueprints';
+import { Construct } from 'constructs';
+import { ServiceAccount } from 'aws-cdk-lib/aws-eks';
 
 export type DataAccessType = 'Full' | 'Restricted' | 'PIIRestricted';
 
-export interface PixieAddOnProps {
+export interface PixieAddOnProps extends ssp.addons.HelmAddOnUserProps {
     /**
      * Helm chart repository.
      * Defaults to the official repo URL.
@@ -161,11 +161,12 @@ const createSecretPodManifest = (
   return deployment;
 };
 
-const defaultProps: PixieAddOnProps = {
+const defaultProps: ssp.addons.HelmAddOnProps & PixieAddOnProps = {
+  name: 'pixie-eks-blueprint-addon',
   repository: 'https://pixie-operator-charts.storage.googleapis.com',
   release: 'pixie',
   chart: 'pixie-operator-chart',
-  version: '0.0.19',
+  version: '0.0.21',
   namespace: 'pl',
   cloudAddr: 'withpixie.ai:443',
   useEtcdOperator: false,
@@ -174,7 +175,7 @@ const defaultProps: PixieAddOnProps = {
   deployKey: '',
 };
 
-export class PixieAddOn implements ssp.ClusterAddOn {
+export class PixieAddOn extends ssp.addons.HelmAddOn {
   readonly options: PixieAddOnProps;
 
   /*
@@ -200,10 +201,11 @@ export class PixieAddOn implements ssp.ClusterAddOn {
   }
 
   constructor(props?: PixieAddOnProps) {
+    super({ ...defaultProps, ...props });
     this.options = { ...defaultProps, ...props };
   }
 
-  deploy(clusterInfo: ssp.ClusterInfo): Promise<Construct> {
+  async deploy(clusterInfo: ssp.ClusterInfo): Promise<Construct> {
     const props = this.options;
     let secretPod : Construct | undefined;
 
@@ -224,8 +226,6 @@ export class PixieAddOn implements ssp.ClusterAddOn {
         createSecretPodManifest('busybox', sa, 'pixie-deploy-key-secret-class'),
       );
       secretProviderClass.addDependent(secretPod!);
-
-      props.deployKey = 'unused'; // This is temporary, until the Vizier CRD makes this field non-required.
     }
 
     const pixieHelmChart = clusterInfo.cluster.addHelmChart('pixie', {
