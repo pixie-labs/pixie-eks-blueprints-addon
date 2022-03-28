@@ -201,7 +201,7 @@ export class PixieAddOn extends ssp.addons.HelmAddOn {
   }
 
   constructor(props?: PixieAddOnProps) {
-    super({...defaultProps, ...props});
+    super({ ...defaultProps, ...props });
     this.options = { ...defaultProps, ...props };
   }
 
